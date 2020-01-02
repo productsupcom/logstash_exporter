@@ -1,0 +1,14 @@
+[Unit]
+Description=prometheus logstash exporter
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/logstash_exporter/logstash_exporter $NODE_EXPORTER_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
