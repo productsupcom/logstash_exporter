@@ -1,0 +1,14 @@
+name: "logstash-exporter"
+arch: "all"
+platform: "linux"
+version: "${TAG}"
+section: "utils"
+priority: extra
+maintainer: "Productsup <ops@productsup.com>"
+description: "Logstash-exporter"
+vendor: "Productsup"
+homepage: "https://github.com/productsupcom/logstash_exporter"
+config_files:
+  ./service/logstash-exporter.service: "/etc/systemd/system/logstash-exporter.service"
+files:
+  ./**/*: "/opt/logstash_exporter"
