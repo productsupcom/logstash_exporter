@@ -43,37 +43,20 @@ pipeline {
                     reuseNode true
                 }
             }
-            when {
-              branch 'master'
-            }
             steps {
-                sh "go build -o ./build/${build_name} -ldflags \"-X github.com/productsupcom/logstash_exporter/cmd.appVersion=${version}\""
-
-            }
-        }
-
-
-        stage ('Clean unneeded files') {
-            steps {
-                dir ('logstash_exporter') {
-                    sh """
-                        ( find . -type d -name ".git" \
-                            && find . -name ".gitignore" \
-                            && find . -name ".gitmodules" \
-                            && find . -type d -name "test" \
-                            && find . -type d -name "tests" ) | xargs rm -rf
-                    """
-                }
+                sh "make"
             }
         }
 
         stage ('Build deb package') {
             steps {
-                script {
-                    sh "cd logstash_exporter && TAG=${TAG} nfpm pkg --target ../${NAME}_${TAG}_all.deb"
-                    sh "dpkg-deb -I ${NAME}_${TAG}_all.deb"
-                    sh "dpkg -c ${NAME}_${TAG}_all.deb"
-                }
+                dir ('logstash_exporter/build') {
+                    script {
+                        sh "TAG=${TAG} nfpm pkg --target ../${NAME}_${TAG}_all.deb --config ../nfpm.yaml"
+                        sh "dpkg-deb -I ${NAME}_${TAG}_all.deb"
+                        sh "dpkg -c ${NAME}_${TAG}_all.deb"
+                    }
+                } 
             }
         }
 
@@ -82,7 +65,6 @@ pipeline {
                 sshagent (credentials: ['jenkins-ssh']) {
                     script {
                         PACKAGE_NAME=${NAME}_${TAG}_all.deb
-                        scp ${PACKAGE_NAME} root@workspace.productsup.com:/tmp/
                         scp ${PACKAGE_NAME} root@aptly.productsup.com:/tmp/
                         ssh root@aptly.productsup.com "aptly repo add stable /tmp/${PACKAGE_NAME} && aptly publish update -passphrase-file='/root/.aptly/passphrase' -batch stable s3:aptly-productsup:debian && rm /tmp/${PACKAGE_NAME}"
                     }
