@@ -49,17 +49,17 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            agent {
-                docker { 
-                    image 'golang:1.13.0-buster'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'go test'
-            }
-        }
+//        stage('Run Tests') {
+//            agent {
+//                docker { 
+//                    image 'golang:1.13.0-buster'
+//                    reuseNode true
+//                }
+//            }
+//            steps {
+//                sh 'go test'
+//            }
+//        }
 
         stage('Build go package') {
             agent {
