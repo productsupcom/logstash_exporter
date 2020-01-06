@@ -1,5 +1,5 @@
 def NAME
-def TAG
+def version
 
 pipeline {
     agent { label 'jenkins-4'}
@@ -19,20 +19,45 @@ pipeline {
     stages {
         stage("Checkout") {
             steps {
-                dir ('logstash_exporter') {
-                    checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'refs/heads/'+env.BRANCH_NAME]],
+                    extensions: [[$class: 'CloneOption', noTags: false, shallow: false, depth: 0, reference: '']],
+                    userRemoteConfigs: scm.userRemoteConfigs,
+                ])
+                sh "git checkout ${env.BRANCH_NAME}"
+                sh "git reset --hard origin/${env.BRANCH_NAME}" 
                 }
-            }
         }
 
         stage ('Getter information') {
             steps {
                 script {
-                    NAME    = ("logstash_exporter").toLowerCase()
-                    TAG = env.TAG_NAME.toLowerCase()
-
                     sh 'printenv | sort'
+                    NAME    = ("logstash-exporter").toLowerCase()
+                    TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                    sh "echo 'tag: ${TAG}'"
+                    if ( env.TAG_NAME ) {
+                        version = env.TAG_NAME.toLowerCase()
+                    } else if ( env.BRANCH_NAME.startsWith('PR') ) {
+                        version = "${TAG}.${env.BRANCH_NAME.replace('PR-', '')}-${env.BUILD_ID}"
+                    } else {
+                        version = "${TAG}-${env.BRANCH_NAME}-${env.BUILD_ID}"
+                    }
+                    sh "echo ${version}"
                 }
+            }
+        }
+
+        stage('Run Tests') {
+            agent {
+                docker { 
+                    image 'golang:1.13.0-buster'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh 'go test'
             }
         }
 
@@ -44,30 +69,30 @@ pipeline {
                 }
             }
             steps {
-                sh "go build -ldflags \"-s -X github.com/productsupcom/logstash_exporter/vendor/github.com/prometheus/common/version.Version=`cat VERSION`\""
-
+                sh "go build -ldflags \"-s -X github.com/productsupcom/logstash_exporter/vendor/github.com/prometheus/common/version.Version=${version}\""
             }
         }
 
         stage ('Build deb package') {
             steps {
-                dir ('logstash_exporter/build') {
-                    script {
-                        sh "TAG=${TAG} nfpm pkg --target ../${NAME}_${TAG}_all.deb --config ../nfpm.yaml"
-                        sh "dpkg-deb -I ${NAME}_${TAG}_all.deb"
-                        sh "dpkg -c ${NAME}_${TAG}_all.deb"
-                    }
-                } 
+                script {
+                    sh "version=${version} nfpm pkg --target ${NAME}_${version}_all.deb"
+                    sh "dpkg-deb -I ${NAME}_${version}_all.deb"
+                    sh "dpkg -c ${NAME}_${version}_all.deb"
+                }
             }
         }
 
         stage ('Publish deb package') {
+            when { 
+                buildingTag()
+             }
             steps {
                 sshagent (credentials: ['jenkins-ssh']) {
                     script {
-                        PACKAGE_NAME=${NAME}_${TAG}_all.deb
-                        scp ${PACKAGE_NAME} root\@aptly.productsup.com:/tmp/
-                        ssh root\@aptly.productsup.com "aptly repo add stable /tmp/${PACKAGE_NAME} && aptly publish update -passphrase-file='/root/.aptly/passphrase' -batch stable s3:aptly-productsup:debian && rm /tmp/${PACKAGE_NAME}"
+                        sh "scp -o StrictHostKeyChecking=no ${NAME}_${version}_all.deb root@aptly.productsup.com:/tmp/"
+                        sh "ssh -o StrictHostKeyChecking=no root@aptly.productsup.com \"aptly repo add stable /tmp/${NAME}_${version}_all.deb && \
+                           aptly publish update -passphrase-file='/root/.aptly/passphrase' -batch stable s3:aptly-productsup:debian && rm /tmp/${NAME}_${version}_all.deb\""
                     }
                 }
             }
@@ -81,13 +106,3 @@ pipeline {
     }
 }
 
-def checkFolderForDiffs(path) {
-    try {
-        // git diff will return 1 for changes (failure) which is caught in catch, or
-        // 0 meaning no changes 
-        sh "git diff --quiet --exit-code HEAD~1..HEAD ${path}"
-        return false
-    } catch (err) {
-        return true
-    }
-}

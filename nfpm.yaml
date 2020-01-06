@@ -1,7 +1,7 @@
 name: "logstash-exporter"
 arch: "all"
 platform: "linux"
-version: "${TAG}"
+version: "${VERSION}"
 section: "utils"
 priority: extra
 maintainer: "Productsup <ops@productsup.com>"
