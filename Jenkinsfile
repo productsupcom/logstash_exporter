@@ -66,8 +66,8 @@ pipeline {
                 sshagent (credentials: ['jenkins-ssh']) {
                     script {
                         PACKAGE_NAME=${NAME}_${TAG}_all.deb
-                        scp ${PACKAGE_NAME} root@aptly.productsup.com:/tmp/
-                        ssh root@aptly.productsup.com "aptly repo add stable /tmp/${PACKAGE_NAME} && aptly publish update -passphrase-file='/root/.aptly/passphrase' -batch stable s3:aptly-productsup:debian && rm /tmp/${PACKAGE_NAME}"
+                        scp ${PACKAGE_NAME} root\@aptly.productsup.com:/tmp/
+                        ssh root\@aptly.productsup.com "aptly repo add stable /tmp/${PACKAGE_NAME} && aptly publish update -passphrase-file='/root/.aptly/passphrase' -batch stable s3:aptly-productsup:debian && rm /tmp/${PACKAGE_NAME}"
                     }
                 }
             }
