@@ -1,15 +1,17 @@
 package main
 
 import (
-	"github.com/productsupcom/logstash_exporter/collector"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
-	"github.com/prometheus/common/version"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"net/http"
 	_ "net/http/pprof"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/log"
+	"github.com/prometheus/common/version"
+	"github.com/sequra/logstash_exporter/collector"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -50,7 +52,7 @@ func NewLogstashCollector(logstashEndpoint string) (*LogstashCollector, error) {
 }
 
 func listen(exporterBindAddress string) {
-	http.Handle("/metrics", prometheus.Handler())
+	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
 	})
@@ -87,7 +89,7 @@ func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
 	var result string
 
 	if err != nil {
-		log.Errorf("ERROR: %s collector failed after %fs: %s", name, duration.Seconds(), err)
+		log.Debugf("ERROR: %s collector failed after %fs: %s", name, duration.Seconds(), err)
 		result = "error"
 	} else {
 		log.Debugf("OK: %s collector succeeded after %fs.", name, duration.Seconds())

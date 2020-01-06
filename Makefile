@@ -1,45 +1,53 @@
-GO              ?= GO15VENDOREXPERIMENT=1 go
-GOPATH          := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
-PROMU           ?= $(GOPATH)/bin/promu
-GOLINTER        ?= $(GOPATH)/bin/gometalinter
-pkgs            = $(shell $(GO) list ./... | grep -v /vendor/)
-TARGET          ?= logstash_exporter
+all: clean format golint
 
-PREFIX          ?= $(shell pwd)
-BIN_DIR         ?= $(shell pwd)
+include Makefile.common
 
-all: clean format vet gometalinter build test
+TARGET ?= logstash_exporter
+
+GOLINT         := $(FIRST_GOPATH)/bin/golangci-lint
+GOLINT_VERSION := v1.15.0
+
+vendor:
+	@echo ">> installing dependencies on vendor"
+	GO111MODULE=$(GO111MODULE) $(GO) mod vendor
 
 test:
 	@echo ">> running tests"
-	@$(GO) test -short $(pkgs)
+	GO111MODULE=$(GO111MODULE) $(GO) test -short $(pkgs)
 
 format:
 	@echo ">> formatting code"
-	@$(GO) fmt $(pkgs)
+	GO111MODULE=$(GO111MODULE) $(GO) fmt $(pkgs)
 
-gometalinter: $(GOLINTER)
+golint: golangci-lint
 	@echo ">> linting code"
-	@$(GOLINTER) --install --update > /dev/null
-	@$(GOLINTER) --config=./.gometalinter.json ./...
+	GO111MODULE=$(GO111MODULE) $(GOLINT) run
 
-build: $(PROMU)
+build: promu vendor
 	@echo ">> building binaries"
-	@$(PROMU) build --prefix $(PREFIX)
+	GO111MODULE=$(GO111MODULE) $(PROMU) build --prefix $(PREFIX)
+
+crossbuild: promu vendor
+	@echo ">> cross-building binaries"
+	GO111MODULE=$(GO111MODULE) $(PROMU) crossbuild
+
+tarball: promu vendor
+	@echo ">> building release tarball"
+	GO111MODULE=$(GO111MODULE) $(PROMU) tarball --prefix $(PREFIX) $(BIN_DIR)
+
+tarballs: promu vendor
+	@echo ">> building release tarballs"
+	GO111MODULE=$(GO111MODULE) $(PROMU) crossbuild tarballs $(BIN_DIR)
 
 clean:
 	@echo ">> Cleaning up"
 	@find . -type f -name '*~' -exec rm -fv {} \;
 	@rm -fv $(TARGET)
 
-$(GOPATH)/bin/promu promu:
-	@GOOS=$(shell uname -s | tr A-Z a-z) \
-		GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m))) \
-		$(GO) get -u github.com/prometheus/promu
+.PHONY: all clean format golint build test
 
-$(GOPATH)/bin/gometalinter lint:
-	@GOOS=$(shell uname -s | tr A-Z a-z) \
-		GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m))) \
-		$(GO) get -u github.com/alecthomas/gometalinter
+.PHONY: golangci-lint
+golangci-lint: $(GOLINT)
 
-.PHONY: all format vet build test promu clean $(GOPATH)/bin/promu $(GOPATH)/bin/gometalinter lint
+$(GOLINT):
+	curl --silent --fail --location https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(FIRST_GOPATH)/bin ${GOLINT_VERSION}

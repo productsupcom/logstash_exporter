@@ -3,17 +3,19 @@ package collector
 // Pipeline type
 type Pipeline struct {
 	Events struct {
-		DurationInMillis int `json:"duration_in_millis"`
-		In               int `json:"in"`
-		Filtered         int `json:"filtered"`
-		Out              int `json:"out"`
+		DurationInMillis          int `json:"duration_in_millis"`
+		In                        int `json:"in"`
+		Filtered                  int `json:"filtered"`
+		Out                       int `json:"out"`
+		QueuePushDurationInMillis int `json:"queue_push_duration_in_millis"`
 	} `json:"events"`
 	Plugins struct {
 		Inputs []struct {
 			ID     string `json:"id"`
 			Events struct {
-				In  int `json:"in"`
-				Out int `json:"out"`
+				QueuePushDurationInMillis int `json:"queue_push_duration_in_millis"`
+				In                        int `json:"in"`
+				Out                       int `json:"out"`
 			} `json:"events"`
 			Name string `json:"name"`
 		} `json:"inputs,omitempty"`
@@ -33,10 +35,20 @@ type Pipeline struct {
 			Formats int `json:"formats,omitempty"`
 		} `json:"filters"`
 		Outputs []struct {
-			ID     string `json:"id"`
+			ID           string `json:"id"`
+			BulkRequests *struct {
+				Successes  int `json:"successes"`
+				WithErrors int `json:"with_errors"`
+				Failures   int `json:"failures"`
+			} `json:"bulk_requests,omitempty"`
+			Documents *struct {
+				Successes            int `json:"successes"`
+				NonRetryableFailures int `json:"non_retryable_failures"`
+			} `json:"documents,omitempty"`
 			Events struct {
-				In  int `json:"in"`
-				Out int `json:"out"`
+				DurationInMillis int `json:"duration_in_millis"`
+				In               int `json:"in"`
+				Out              int `json:"out"`
 			} `json:"events"`
 			Name string `json:"name"`
 		} `json:"outputs"`
@@ -52,6 +64,7 @@ type Pipeline struct {
 		Events   int    `json:"events"`
 		Type     string `json:"type"`
 		Capacity struct {
+			QueueSizeInBytes    int   `json:"queue_size_in_bytes"`
 			PageCapacityInBytes int   `json:"page_capacity_in_bytes"`
 			MaxQueueSizeInBytes int64 `json:"max_queue_size_in_bytes"`
 			MaxUnreadEvents     int   `json:"max_unread_events"`
