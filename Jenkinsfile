@@ -34,7 +34,7 @@ pipeline {
             steps {
                 script {
                     sh 'printenv | sort'
-                    NAME    = ("logstash-exporter").toLowerCase()
+                    NAME    = ("logstash_exporter").toLowerCase()
                     TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
                     sh "echo 'tag: ${TAG}'"
                     if ( env.TAG_NAME ) {
