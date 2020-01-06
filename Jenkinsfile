@@ -21,12 +21,12 @@ pipeline {
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: 'refs/heads/'+env.BRANCH_NAME]],
+                    branches: [[name: env.BRANCH_NAME]],
                     extensions: [[$class: 'CloneOption', noTags: false, shallow: false, depth: 0, reference: '']],
                     userRemoteConfigs: scm.userRemoteConfigs,
                 ])
-                sh "git checkout ${env.BRANCH_NAME}"
-                sh "git reset --hard origin/${env.BRANCH_NAME}" 
+        //        sh "git checkout ${env.BRANCH_NAME}"
+        //        sh "git reset --hard origin/${env.BRANCH_NAME}" 
                 }
         }
 
