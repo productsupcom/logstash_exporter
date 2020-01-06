@@ -69,7 +69,7 @@ pipeline {
                 }
             }
             steps {
-                sh "go build -ldflags \"-s -X github.com/productsupcom/logstash_exporter/vendor/github.com/prometheus/common/version.Version=${version}\""
+                sh "go build -o ./build/${NAME} -ldflags \"-s -X github.com/productsupcom/logstash_exporter/vendor/github.com/prometheus/common/version.Version=${version}\""
             }
         }
 
