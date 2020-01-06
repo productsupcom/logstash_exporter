@@ -44,7 +44,8 @@ pipeline {
                 }
             }
             steps {
-                sh "make"
+                sh "go build -ldflags \"-s -X github.com/productsupcom/logstash_exporter/vendor/github.com/prometheus/common/version.Version=`cat VERSION`\""
+
             }
         }
 
